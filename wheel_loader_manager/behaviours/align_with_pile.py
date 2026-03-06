@@ -1,6 +1,5 @@
 import py_trees
-from std_msgs.msg import Float32
-
+from std_msgs.msg import Bool
 
 class AlignWithPile(py_trees.behaviour.Behaviour):
 
@@ -8,30 +7,22 @@ class AlignWithPile(py_trees.behaviour.Behaviour):
         super().__init__("AlignWithPile")
 
         self.node = node
-        self.distance = None
+        self.is_arrived = False
 
-        # same threshold used in tracker
-        self.arrival_threshold = 20.0
-
-        node.create_subscription(
-            Float32,
-            "/woodchip_tracker/bottom_distance",
+        self.node.create_subscription(
+            Bool,
+            "/woodchip_tracker/arrived",
             self.callback,
             10
         )
 
     def callback(self, msg):
-        self.distance = msg.data
+        self.is_arrived = msg.data
 
     def update(self):
-
-        if self.distance is None:
-            return py_trees.common.Status.RUNNING
-
-        if self.distance <= self.arrival_threshold:
-
-            self.node.get_logger().info("[BT] Alignment Complete")
-
+        # Wait until the tracker explicitly confirms we are centered AND close enough
+        if self.is_arrived:
+            self.node.get_logger().info("[BT] Alignment Complete - Triggering Scoop!")
             return py_trees.common.Status.SUCCESS
 
         return py_trees.common.Status.RUNNING
