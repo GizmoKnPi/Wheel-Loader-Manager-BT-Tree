@@ -1,0 +1,4 @@
+system_manager_node:
+  ros__parameters:
+    blind_drive_speed: 0.08      # Speed in m/s (slow and steady for scooping)
+    standoff_distance: 0.45      # Must match the standoff in smart_wiper

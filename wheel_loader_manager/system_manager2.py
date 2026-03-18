@@ -7,7 +7,6 @@ import py_trees_ros
 from geometry_msgs.msg import Twist
 from geometry_msgs.msg import PoseWithCovarianceStamped
 
-from wheel_loader_manager.behaviours.manual_override import ManualOverride
 from wheel_loader_manager.behaviours.wait_for_localization import WaitForLocalization
 from wheel_loader_manager.behaviours.navigate_to_pile import NavigateToPile
 from wheel_loader_manager.behaviours.wait_for_nav_goal_reached import WaitForNavGoalReached
@@ -46,7 +45,6 @@ class SystemManager(Node):
         )
 
         # ---- BUILD TREE ----
-        # manual = ManualOverride(self)
         auto_sequence = py_trees.composites.Sequence(
             name="AutoMission",
             memory=True
@@ -60,38 +58,30 @@ class SystemManager(Node):
 
         # 1. Existing Phase: Arrive, Align, and Scan
         wait_loc = WaitForLocalization(self)
-        wait_nav_initial = WaitForNavGoalReached(self) # Renamed for clarity
+        
+        # ❌ DISABLED FOR TESTING: wait_nav_initial = WaitForNavGoalReached(self) 
+        
         enable_tracker = EnableTracker(self)
         align = AlignWithPile(self)
         disable_tracker = DisableTracker(self)
         start_rock = StartRocking(self)
         wait_scan = WaitForScanTime(20.0)
         save_cloud = SaveCloud(self)
-        process_cloud = ProcessCloud(self) # <-- This node sends the Standoff Nav Goal
+        process_cloud = ProcessCloud(self)
 
-        # 2. 🚀 NEW PHASE: Final Approach and Scoop
-        
-        # Wait for Nav2 to park the robot 35cm away from the pile
+        # 2. NEW PHASE: Final Approach and Scoop
         wait_nav_standoff = WaitForNavGoalReached(self) 
-        
-        # Drop the bucket to the floor
-        bucket_down = ControlBucket(
-            name="BucketDown", node=self, command='R', expected_state='RESET')
-            
-        # Push straight into the pile
+        bucket_down = ControlBucket(name="BucketDown", node=self, command='R', expected_state='RESET')
         drive_in = BlindDrive(name="DriveIn", node=self, direction=1.0)
-        
-        # Lift the bucket to capture the payload
-        bucket_up = ControlBucket(
-            name="BucketUp", node=self, command='B', expected_state='SCOOP')
-            
-        # Reverse straight back to the safe parking spot
+        bucket_up = ControlBucket(name="BucketUp", node=self, command='B', expected_state='SCOOP')
         drive_out = BlindDrive(name="DriveOut", node=self, direction=-1.0)
 
         # ---- ADD TO SEQUENCE ----
         auto_sequence.add_children([
             wait_loc,
-            wait_nav_initial,
+            
+            # ❌ DISABLED FOR TESTING: wait_nav_initial,
+            
             enable_tracker,
             align,
             disable_tracker,
@@ -99,18 +89,12 @@ class SystemManager(Node):
             wait_scan,
             save_cloud,
             process_cloud,
-            wait_nav_standoff, # 🚀 New sequence starts here
+            wait_nav_standoff, 
             bucket_down,
             drive_in,
             bucket_up,
             drive_out
         ])
-
-        # root = py_trees.composites.Selector(
-        #     name="Root",
-        #     memory=False
-        # )
-        # root.add_children([manual, auto_once])
 
         self.tree = py_trees_ros.trees.BehaviourTree(auto_once)
         self.tree.setup(timeout=15)
@@ -119,16 +103,13 @@ class SystemManager(Node):
 
     def teleop_callback(self, msg):
         import time
-        
         if abs(msg.linear.x) > 0.01 or abs(msg.angular.z) > 0.01:
             self.last_teleop_time = time.time()
 
     def teleop_active(self):
         import time
-
         if self.last_teleop_time is None:
             return False
-
         return (time.time() - self.last_teleop_time) < 1.0
 
     def amcl_callback(self, msg):
@@ -137,14 +118,12 @@ class SystemManager(Node):
     def tick_tree(self):
         self.tree.tick()
 
-
 def main(args=None):
     rclpy.init(args=args)
     node = SystemManager()
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()
-
 
 if __name__ == '__main__':
     main()
