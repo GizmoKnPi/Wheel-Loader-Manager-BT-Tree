@@ -3,10 +3,11 @@ import rclpy
 from std_msgs.msg import String
 
 class ControlBucket(py_trees.behaviour.Behaviour):
-    def __init__(self, name, node, command, expected_state):
+    # 🚀 Notice expected_state=None here!
+    def __init__(self, name, node, command, expected_state=None):
         """
         :param command: The character to send (e.g., 'R', 'B', 'N')
-        :param expected_state: The string to wait for (e.g., 'RESET', 'SCOOP', 'NAV')
+        :param expected_state: The string to wait for. If None, it fires and forgets.
         """
         super().__init__(name)
         self.node = node
@@ -16,7 +17,6 @@ class ControlBucket(py_trees.behaviour.Behaviour):
         self.current_bucket_state = "UNKNOWN"
         self.command_sent = False
 
-        # Subscriber to listen to the bucket's current position
         self.state_sub = self.node.create_subscription(
             String,
             '/bucket_position',
@@ -24,7 +24,6 @@ class ControlBucket(py_trees.behaviour.Behaviour):
             10
         )
 
-        # Publisher to send the command character to the servo_driver
         self.cmd_pub = self.node.create_publisher(
             String,
             '/bucket_command',
@@ -35,23 +34,27 @@ class ControlBucket(py_trees.behaviour.Behaviour):
         self.current_bucket_state = msg.data
 
     def initialise(self):
-        """Runs once each time the node is ticked from an IDLE state."""
         self.command_sent = False
-        self.node.get_logger().info(f"[{self.name}] Initialized. Target state: {self.expected_state}")
+        target = self.expected_state if self.expected_state else 'FIRE_AND_FORGET'
+        self.node.get_logger().info(f"[{self.name}] Initialized. Target state: {target}")
 
     def update(self):
-        """Runs every tick."""
-        
         # 1. Send the command if we haven't already
         if not self.command_sent:
             msg = String()
             msg.data = self.command
             self.cmd_pub.publish(msg)
             self.command_sent = True
+            
+            # 🚀 THE BYPASS: If no expected state, succeed instantly!
+            if self.expected_state is None or self.expected_state == "":
+                self.node.get_logger().info(f"[{self.name}] Sent command '{self.command}'. Fire-and-forget successful!")
+                return py_trees.common.Status.SUCCESS
+                
             self.node.get_logger().info(f"[{self.name}] Sent command '{self.command}'. Waiting for '{self.expected_state}'...")
             return py_trees.common.Status.RUNNING
 
-        # 2. Wait for the ESP32 to confirm the bucket reached the position
+        # 2. Wait for the ESP32 to confirm (if an expected_state was provided)
         if self.current_bucket_state == self.expected_state:
             self.node.get_logger().info(f"[{self.name}] Success! Bucket is in {self.expected_state} position.")
             return py_trees.common.Status.SUCCESS
@@ -60,5 +63,4 @@ class ControlBucket(py_trees.behaviour.Behaviour):
         return py_trees.common.Status.RUNNING
 
     def terminate(self, new_status):
-        """Runs when the node finishes or is interrupted."""
         self.node.get_logger().info(f"[{self.name}] Terminated with status {new_status}")

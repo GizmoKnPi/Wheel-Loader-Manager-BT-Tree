@@ -14,12 +14,16 @@ class HatchOpenReverseBlindDrive(py_trees.behaviour.Behaviour):
         self.speed = 0.15 if self.target_distance > 0 else -0.15
         
         # Calculate how many seconds we need to drive
-        self.duration = abs(self.target_distance / self.speed)
+        if self.speed != 0:
+            self.duration = abs(self.target_distance / self.speed)
+        else:
+            self.duration = 0.0
+            
         self.start_time = None
 
     def initialise(self):
         self.start_time = time.time()
-        self.node.get_logger().info(f"[{self.name}] Reversing {self.target_distance}m...")
+        self.node.get_logger().info(f"[{self.name}] Reversing {self.target_distance}m for {self.duration:.2f} seconds...")
 
     def update(self):
         elapsed = time.time() - self.start_time
@@ -37,7 +41,7 @@ class HatchOpenReverseBlindDrive(py_trees.behaviour.Behaviour):
             return py_trees.common.Status.SUCCESS
 
     def terminate(self, new_status):
-        # Safety catch: if the tree is killed, stop the motors
+        # Safety catch: if the tree is killed or interrupted, stop the motors
         cmd = Twist()
         cmd.linear.x = 0.0
         self.cmd_pub.publish(cmd)
