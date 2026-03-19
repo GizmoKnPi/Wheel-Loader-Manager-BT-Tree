@@ -29,6 +29,7 @@ setup(
         'console_scripts': [
         'system_manager = wheel_loader_manager.system_manager:main',
         'system_manager2 = wheel_loader_manager.system_manager2:main',
+        'system_manager3 = wheel_loader_manager.system_manager3:main',
         ],
     },
 )

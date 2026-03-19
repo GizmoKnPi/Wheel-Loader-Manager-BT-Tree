@@ -4,8 +4,8 @@ from rclpy.action import ActionClient
 from geometry_msgs.msg import PoseStamped
 from nav2_msgs.action import NavigateToPose
 
-class WaitForNavGoalReached(py_trees.behaviour.Behaviour):
-    def __init__(self, node, name="WaitForNavGoalReached"):
+class WaitForDumpGoal(py_trees.behaviour.Behaviour):
+    def __init__(self, node, name="WaitForDumpGoal"):
         super().__init__(name)
         self.node = node
         self.goal_received = False
@@ -15,7 +15,7 @@ class WaitForNavGoalReached(py_trees.behaviour.Behaviour):
         self.nav_done = False
         self.nav_success = False
 
-        # Listen to the topic
+        # Listen to RViz clicks
         self.pose_sub = self.node.create_subscription(
             PoseStamped,
             '/goal_pose',
@@ -23,31 +23,23 @@ class WaitForNavGoalReached(py_trees.behaviour.Behaviour):
             10
         )
 
-    def initialise(self):
-        # 🚀 THE FIX: WIPE THE MEMORY CLEAN EVERY TIME IT WAKES UP
-        self.goal_received = False
-        self.target_pose = None
-        self.goal_handle = None
-        self.nav_done = False
-        self.nav_success = False
-        self.node.get_logger().info(f"[{self.name}] Armed. Watching for Nav2 arrival...")
-
     def pose_cb(self, msg):
-        # 🚀 THE SAFETY LOCK: Only accept goals if it is actively my turn!
+        # Only accept the RViz click if the tree is actually at this step!
         if self.status == py_trees.common.Status.RUNNING and not self.goal_received:
             self.target_pose = msg
             self.goal_received = True
-            self.node.get_logger().info(f"[{self.name}] Goal caught! Sending to Nav2...")
+            self.node.get_logger().info(f"[{self.name}] Dump site goal received from RViz! Sending to Nav2...")
 
     def update(self):
-        # 1. Wait for goal to arrive
+        # 1. Wait for human to click RViz
         if not self.goal_received:
+            self.node.get_logger().info(f"[{self.name}] WAITING... Please click '2D Goal Pose' in RViz for the dump site.", throttle_duration_sec=3.0)
             return py_trees.common.Status.RUNNING
 
         # 2. Fire the goal to Nav2
         if self.goal_received and self.goal_handle is None:
             if not self.nav_client.wait_for_server(timeout_sec=1.0):
-                self.node.get_logger().error(f"[{self.name}] Nav2 action server missing!")
+                self.node.get_logger().error("Nav2 action server not available!")
                 return py_trees.common.Status.FAILURE
 
             goal_msg = NavigateToPose.Goal()
@@ -61,10 +53,10 @@ class WaitForNavGoalReached(py_trees.behaviour.Behaviour):
         # 3. Wait for Nav2 to finish driving
         if self.nav_done:
             if self.nav_success:
-                self.node.get_logger().info(f"[{self.name}] Nav2 Goal Reached!")
+                self.node.get_logger().info(f"[{self.name}] Arrived at dump site!")
                 return py_trees.common.Status.SUCCESS
             else:
-                self.node.get_logger().error(f"[{self.name}] Nav2 failed to reach goal.")
+                self.node.get_logger().error(f"[{self.name}] Failed to reach dump site. Aborting.")
                 return py_trees.common.Status.FAILURE
 
         return py_trees.common.Status.RUNNING
@@ -72,7 +64,7 @@ class WaitForNavGoalReached(py_trees.behaviour.Behaviour):
     def goal_response_cb(self, future):
         goal_handle = future.result()
         if not goal_handle.accepted:
-            self.node.get_logger().error(f"[{self.name}] Nav2 rejected the goal.")
+            self.node.get_logger().error("Nav2 rejected dump goal.")
             self.nav_done = True
             self.nav_success = False
             return

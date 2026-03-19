@@ -24,6 +24,12 @@ class SystemManager(Node):
 
     def __init__(self):
         super().__init__('system_manager')
+        
+        # ---- DECLARE PARAMETERS ----
+        self.declare_parameters(namespace='', parameters=[
+            ('hatch_open_time', 5.0),
+            ('hatch_close_time', 5.0)
+        ])
 
         # ---- STATE FLAGS ----
         self.last_teleop_time = None
