@@ -69,7 +69,7 @@ class SystemManager3(Node):
 
         # 1. Existing Phase: Arrive, Align, and Scan
         wait_loc = WaitForLocalization(self)
-        wait_nav_initial = WaitForNavGoalReached(self) 
+        wait_nav_initial = WaitForNavGoalReached(self, name="WaitNavInitial") 
         enable_tracker = EnableTracker(self)
         align = AlignWithPile(self)
         disable_tracker = DisableTracker(self)
@@ -79,7 +79,7 @@ class SystemManager3(Node):
         process_cloud = ProcessCloud(self) 
 
         # 2. Existing Phase: Final Approach and Scoop
-        wait_nav_standoff = WaitForNavGoalReached(self) 
+        wait_nav_standoff = WaitForNavGoalReached(self, name="WaitNavStandoff") 
         bucket_down = ControlBucket(name="BucketDown", node=self, command='R', expected_state='RESET')
         drive_in = BlindDrive(name="DriveIn", node=self, direction=1.0)
         bucket_up = ControlBucket(name="BucketUp", node=self, command='B', expected_state='SCOOP')
@@ -87,10 +87,17 @@ class SystemManager3(Node):
 
         # 3. 🚀 NEW PHASE: The Dump Sequence
         wait_dump_goal = WaitForDumpGoal(self) 
-        open_hatch = ControlBucket(name="OpenHatch", node=self, command='O', expected_state='HATCH_OPEN')
+        open_hatch = ControlBucket(
+            name="OpenHatch", node=self, command='O', expected_state=None)
+            
         wait_open = WaitForTime(name="WaitOpen", node=self, param_name='hatch_open_time')
-        drive_back_dump = HatchOpenReverseBlindDrive(name="DriveBackDump", node=self, distance=-0.2)
-        close_hatch = ControlBucket(name="CloseHatch", node=self, command='C', expected_state='HATCH_CLOSED')
+        
+        drive_back_dump = HatchOpenReverseBlindDrive(
+            name="DriveBackDump", node=self, distance=-0.2)
+            
+        close_hatch = ControlBucket(
+            name="CloseHatch", node=self, command='C', expected_state=None)
+            
         wait_close = WaitForTime(name="WaitClose", node=self, param_name='hatch_close_time')
         
         # NOTE: Change 'N' below if your ESP32 uses a different character for travel/nav mode
