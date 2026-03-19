@@ -101,7 +101,7 @@ class SystemManager3(Node):
         wait_close = WaitForTime(name="WaitClose", node=self, param_name='hatch_close_time')
         
         # NOTE: Change 'N' below if your ESP32 uses a different character for travel/nav mode
-        nav_mode = ControlBucket(name="NavMode", node=self, command='N', expected_state='NAV_MODE')
+        nav_mode = ControlBucket(name="NavMode", node=self, command='N', expected_state='NAV')
 
         # ---- ADD TO SEQUENCE ----
         auto_sequence.add_children([

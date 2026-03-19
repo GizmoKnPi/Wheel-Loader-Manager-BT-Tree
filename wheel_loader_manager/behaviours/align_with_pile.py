@@ -19,6 +19,12 @@ class AlignWithPile(py_trees.behaviour.Behaviour):
     def callback(self, msg):
         self.is_arrived = msg.data
 
+    def initialise(self):
+        # 🚀 THE FIX: Shred the memory from the previous loop!
+        # This forces the node to wait for a FRESH 'True' message from the tracker.
+        self.is_arrived = False
+        self.node.get_logger().info(f"[{self.name}] Waking up for alignment... memory wiped!")
+
     def update(self):
         # Wait until the tracker explicitly confirms we are centered AND close enough
         if self.is_arrived:
