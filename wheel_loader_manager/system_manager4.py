@@ -67,7 +67,7 @@ class SystemManager4(Node):
         bucket_down = ControlBucket(name="BucketDown", node=self, command='R', expected_state='RESET')
         drive_in = BlindDrive(name="DriveIn", node=self, direction=1.0)
         bucket_up = ControlBucket(name="BucketUp", node=self, command='B', expected_state='SCOOP')
-        drive_out = BlindDrive(name="DriveOut", node=self, direction=-1.0)
+        drive_out = BlindDrive(name="DriveOut", node=self, direction=-1.5)
 
         # 5. Dump Phase
         open_hatch = ControlBucket(name="OpenHatch", node=self, command='O', expected_state=None)

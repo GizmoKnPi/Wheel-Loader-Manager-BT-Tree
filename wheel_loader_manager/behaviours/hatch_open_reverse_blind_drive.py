@@ -11,7 +11,7 @@ class HatchOpenReverseBlindDrive(py_trees.behaviour.Behaviour):
         self.cmd_pub = self.node.create_publisher(Twist, '/cmd_vel', 10)
         
         # Set speed based on direction
-        self.speed = 0.15 if self.target_distance > 0 else -0.15
+        self.speed = 0.15 if self.target_distance > 0 else -0.20
         
         # Calculate how many seconds we need to drive
         if self.speed != 0:
