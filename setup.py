@@ -31,6 +31,7 @@ setup(
         'system_manager2 = wheel_loader_manager.system_manager2:main',
         'system_manager3 = wheel_loader_manager.system_manager3:main',
         'system_manager4 = wheel_loader_manager.system_manager4:main',
+        'system_manager5 = wheel_loader_manager.system_manager5:main',
         ],
     },
 )
